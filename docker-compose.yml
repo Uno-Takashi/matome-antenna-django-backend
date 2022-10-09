@@ -1,0 +1,60 @@
+version: '3.8'
+
+x-env_file: &env_file ./.env.global
+
+services:
+  nginx:
+    container_name: nginx
+    image: nginx:1.23
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "./nginx/:/etc/nginx/"
+      - "./Django/static:/static"
+      - "./nginx/.well-known:/.well-known"
+    depends_on:
+      - django
+    env_file: *env_file
+  django:
+    container_name: Django
+    build:
+      context: Django
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    volumes:
+      - ./Django/:/usr/src/app/
+      - ./Django/.env.django:/env_files/.env.django
+      - .env.global:/env_files/.env.global
+    command: "sh entorypoint.sh"
+    env_file:
+      - ./Django/.env.django
+      - *env_file
+    depends_on:
+      - mysql
+  mysql:
+    image: mysql:8.0
+    container_name: MySQL
+    cap_add:
+      - SYS_NICE
+    ports:
+      - 3306:3306
+    volumes:
+      - "./MySQL/data:/var/lib/mysql"
+      - "./MySQL/my.cnf:/etc/mysql/conf.d/my.cnf"
+    env_file:
+      - ./MySQL/.env.mysql
+      - *env_file
+  phpmyadmin:
+    container_name: phpMyAdmin
+    image: phpmyadmin/phpmyadmin
+    env_file:
+      - ./phpMyAdmin/.env.phpmyadmin
+      - *env_file
+    links:
+      - mysql
+    ports:
+      - 8080:80
+    volumes:
+      - "./phpMyAdmin/sessions:/sessions"

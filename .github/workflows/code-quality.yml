@@ -1,0 +1,81 @@
+name: Code Quality
+
+on:
+  push:
+
+jobs:
+  lizard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v3
+      - name: Lizard Runner
+        uses: Uno-Takashi/Lizard-Runner@v3
+        with:
+          path: "./Django"
+          language: "python"
+          exclude: "tests.py"
+  dockerlint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Setup node/npm
+        uses: actions/setup-node@v1
+        with:
+          node-version: "15"
+      - name: install dockerlint
+        run: |
+          npm install -g dockerlint
+      - run: |
+          dockerlint ./Django/Dockerfile
+  hadolint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: hadolint/hadolint-action@v2.0.0
+        with:
+          dockerfile: ./Django/Dockerfile
+          ignore: "DL3008,SC2174,DL3009,DL3059,SC3009"
+  dockle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          docker-compose build django
+      - name: Run Dockle
+        uses: erzz/dockle-action@v1
+        with:
+          image: matome-antenna-django-backend-django
+          exit-code: 1
+          failure-threshold: fatal
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: reviewdog/action-actionlint@v1
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: yaml-lint
+        uses: ibiqlik/action-yamllint@v3
+  nginx-conf-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: run docker-compose
+        run: |
+          docker-compose up -d
+      - name: init containers
+        run: |
+          docker-compose exec -T nginx nginx -t
